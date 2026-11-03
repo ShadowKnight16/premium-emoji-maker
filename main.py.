@@ -1,5 +1,7 @@
 import os
+import asyncio
 import logging
+
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.filters import CommandStart
@@ -11,13 +13,6 @@ OWNER_ID = 1220549287
 
 logging.basicConfig(level=logging.INFO)
 
-bot = Bot(
-    token=TOKEN,
-    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
-)
-
-dp = Dispatcher()
-
 keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="🎨 Чёрная тема")],
@@ -27,6 +22,8 @@ keyboard = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
+dp = Dispatcher()
+
 
 @dp.message(CommandStart())
 async def start(message: Message):
@@ -35,9 +32,7 @@ async def start(message: Message):
 
     await message.answer(
         "✨ <b>Premium Emoji Maker</b>\n\n"
-        "Привет! Отправь мне изображение, "
-        "и мы подготовим его для создания эмодзи.\n\n"
-        "Выбери оформление:",
+        "Отправь мне изображение, чтобы начать!",
         reply_markup=keyboard
     )
 
@@ -64,8 +59,7 @@ async def receive_photo(message: Message):
 
     await message.answer(
         "🖼️ Изображение получено!\n"
-        "Следующим этапом добавим удаление фона "
-        "и создание эмодзи."
+        "Обработка изображения появится на следующем этапе."
     )
 
 
@@ -73,9 +67,13 @@ async def main():
     if not TOKEN:
         raise RuntimeError("Не задан BOT_TOKEN")
 
+    bot = Bot(
+        token=TOKEN,
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+    )
+
     await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(main())
