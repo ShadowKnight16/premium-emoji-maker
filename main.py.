@@ -1,7 +1,9 @@
 import os
 import asyncio
 import logging
+from io import BytesIO
 
+import aiohttp
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.filters import CommandStart
@@ -10,6 +12,8 @@ from aiogram.enums import ParseMode
 
 TOKEN = os.getenv("BOT_TOKEN")
 OWNER_ID = 1220549287
+
+API_URL = "https://premium-emoji-maker.onrender.com/remove-bg"
 
 logging.basicConfig(level=logging.INFO)
 
@@ -32,7 +36,7 @@ async def start(message: Message):
 
     await message.answer(
         "✨ <b>Premium Emoji Maker</b>\n\n"
-        "Отправь мне изображение, чтобы начать!",
+        "Отправь мне изображение, чтобы удалить фон!",
         reply_markup=keyboard
     )
 
@@ -53,14 +57,52 @@ async def choose_theme(message: Message):
 
 
 @dp.message(F.photo)
-async def receive_photo(message: Message):
+async def receive_photo(message: Message, bot: Bot):
     if message.from_user.id != OWNER_ID:
         return
 
-    await message.answer(
-        "🖼️ Изображение получено!\n"
-        "Обработка изображения появится на следующем этапе."
-    )
+    status = await message.answer("⏳ Удаляю фон...")
+
+    try:
+        photo = message.photo[-1]
+        file = await bot.get_file(photo.file_id)
+
+        image_data = BytesIO()
+        await bot.download_file(file.file_path, image_data)
+        image_data.seek(0)
+
+        form = aiohttp.FormData()
+        form.add_field(
+            "image",
+            image_data,
+            filename="image.jpg",
+            content_type="image/jpeg"
+        )
+
+        timeout = aiohttp.ClientTimeout(total=240)
+
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(API_URL, data=form) as response:
+                if response.status != 200:
+                    raise Exception(
+                        f"Сервер вернул ошибку: {response.status}"
+                    )
+
+                result = BytesIO(await response.read())
+                result.name = "emoji.png"
+
+        await message.answer_document(
+            document=result,
+            caption="✨ Готово! Фон удалён!"
+        )
+
+        await status.delete()
+
+    except Exception:
+        logging.exception("Ошибка обработки изображения")
+        await status.edit_text(
+            "❌ Не удалось обработать изображение. Попробуй ещё раз."
+        )
 
 
 async def main():
