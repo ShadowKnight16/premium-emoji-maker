@@ -1,0 +1,81 @@
+import os
+import logging
+from aiogram import Bot, Dispatcher, F
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.filters import CommandStart
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
+
+TOKEN = os.getenv("BOT_TOKEN")
+OWNER_ID = 1220549287
+
+logging.basicConfig(level=logging.INFO)
+
+bot = Bot(
+    token=TOKEN,
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+)
+
+dp = Dispatcher()
+
+keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="🎨 Чёрная тема")],
+        [KeyboardButton(text="💜 Фиолетовая тема")],
+        [KeyboardButton(text="☀️ Светлая тема")],
+    ],
+    resize_keyboard=True
+)
+
+
+@dp.message(CommandStart())
+async def start(message: Message):
+    if message.from_user.id != OWNER_ID:
+        return
+
+    await message.answer(
+        "✨ <b>Premium Emoji Maker</b>\n\n"
+        "Привет! Отправь мне изображение, "
+        "и мы подготовим его для создания эмодзи.\n\n"
+        "Выбери оформление:",
+        reply_markup=keyboard
+    )
+
+
+@dp.message(F.text)
+async def choose_theme(message: Message):
+    if message.from_user.id != OWNER_ID:
+        return
+
+    themes = {
+        "🎨 Чёрная тема": "🌑 Чёрная тема выбрана!",
+        "💜 Фиолетовая тема": "💜 Фиолетовая тема выбрана!",
+        "☀️ Светлая тема": "☀️ Светлая тема выбрана!",
+    }
+
+    if message.text in themes:
+        await message.answer(themes[message.text])
+
+
+@dp.message(F.photo)
+async def receive_photo(message: Message):
+    if message.from_user.id != OWNER_ID:
+        return
+
+    await message.answer(
+        "🖼️ Изображение получено!\n"
+        "Следующим этапом добавим удаление фона "
+        "и создание эмодзи."
+    )
+
+
+async def main():
+    if not TOKEN:
+        raise RuntimeError("Не задан BOT_TOKEN")
+
+    await dp.start_polling(bot)
+
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())
